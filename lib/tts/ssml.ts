@@ -7,7 +7,7 @@ export class SSML {
     private volume: number
     private rate: number
     private pitch: number
-    
+
     constructor(text: string, voiceName: string = 'zh-CN-XiaoxiaoNeural', volume: number = 100, rate: number = 0, pitch: number = 0) {
         this.builder = new XMLBuilder({
             ignoreAttributes: false,
@@ -20,7 +20,7 @@ export class SSML {
         this.rate = rate
         this.pitch = pitch
     }
-    
+
     toString(): string {
         const obj = {
             "speak":

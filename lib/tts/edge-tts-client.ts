@@ -12,31 +12,31 @@ class MessageHeader {
     contentType?: string
     path: string
     streamId?: string
-    
+
     constructor(requestId: string, path: string, contentType?: string, streamId?: string) {
         this.requestId = requestId
         this.contentType = contentType
         this.path = path
         this.streamId = streamId
     }
-    
+
     public static parse(data: string): MessageHeader {
         const requestIdPattern = /X-RequestId:(?<id>[a-z|0-9]*)/
         const contentTypePattern = /Content-Type:(?<type>.*)/
         const pathPattern = /Path:(?<path>.*)\s/
         const streamIdPattern = /X-StreamId:(?<id>.*)/
-        
+
         const requestIdMatch = requestIdPattern.exec(data)
         if (requestIdMatch === null) {
             throw new Error('RequestId not found: \n' + data)
         }
-        
+
         const contentTypeMatch = contentTypePattern.exec(data)
         const pathMatch = pathPattern.exec(data)
         if (pathMatch === null) {
             throw new Error('Path not found: \n' + data)
         }
-        
+
         const streamIdMatch = streamIdPattern.exec(data)
         return new MessageHeader(
             requestIdMatch.groups!.id,
@@ -85,8 +85,8 @@ export interface ConvertResult {
 }
 
 export class EdgeTTSClient {
-    private constructor() {}
-    
+    private constructor() { }
+
     public static async voices(): Promise<any> {
         const url = 'https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4'
         const response = await axios.get(url)
@@ -114,12 +114,12 @@ export class EdgeTTSClient {
         }
         return randomString;
     }
-    
+
     private static async createWS(): Promise<WebSocket> {
         const connectionId = this.generateId()
         const secMsGec = this.generateSecMsGecToken()
         let url = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=1-${CHROMIUM_FULL_VERSION}&ConnectionId=${connectionId}`
-        
+
         const client = new WebSocket(url, {
             host: 'speech.platform.bing.com',
             origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
@@ -128,7 +128,7 @@ export class EdgeTTSClient {
                     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
             },
         })
-        
+
         return new Promise((resolve, reject) => {
             client.onopen = () => {
                 console.debug('WebSocket connected')
@@ -144,21 +144,21 @@ export class EdgeTTSClient {
 
     public static async convert(ssml: string, options: ClientOptions): Promise<ConvertResult> {
         console.debug('start convert', JSON.stringify(ssml), JSON.stringify(options))
-        
+
         let convertResult = new Promise<ConvertResult>(async (resolve, reject) => {
             try {
                 let audio = new ArrayBuffer(0)
                 let metadata: any = []
                 const requestId = this.generateId()
                 const ws = await this.createWS()
-                
+
                 ws.onclose = (r) => {
                     console.debug(`Websocket closed with ${r.code}`)
                     if (r.code !== 1000) {
                         reject(new Error(`WebSocket closed with code ${r.code}: ${r.reason}`))
                     }
                 }
-                
+
                 ws.onmessage = (message) => {
                     const messageType = message.data.valueOf()
                     let typeName = 'unknown'
@@ -170,7 +170,7 @@ export class EdgeTTSClient {
                         typeName = 'object'
                     }
                     console.debug(`Received ${typeName} message`)
-                    
+
                     if (message.data instanceof Buffer) {
                         let messageData = new Uint8Array(message.data).buffer
                         const headerRangeByteCount = 2
@@ -192,7 +192,7 @@ export class EdgeTTSClient {
                         const header = MessageHeader.parse(headerString)
                         const body = messageData.slice(headerStringEnd)
                         console.debug('Received text data:', header.requestId, 'StreamId:', header.streamId, 'Path:', header.path, 'Body', body)
-                        
+
                         switch (header.path) {
                             case 'turn.start': {
                                 break
@@ -218,7 +218,7 @@ export class EdgeTTSClient {
                         }
                     }
                 }
-                
+
                 // 发送配置消息
                 let config = createConfigMessage(options)
                 let configMessage =
@@ -226,10 +226,10 @@ export class EdgeTTSClient {
                     'Content-Type:application/json; charset=utf-8\r\n' +
                     'Path:speech.config\r\n\r\n' +
                     JSON.stringify(config)
-                    
+
                 console.debug(`开始转换：${requestId}...`)
                 console.debug(`准备发送配置请求：\n${configMessage}`)
-                
+
                 ws.send(configMessage, (error) => {
                     if (error) {
                         reject(error)
@@ -241,7 +241,7 @@ export class EdgeTTSClient {
                             `Content-Type:application/ssml+xml\r\n` +
                             `Path:ssml\r\n\r\n` +
                             ssml
-                            
+
                         console.debug(`发送转换信息：\n${ssmlMessage}`)
                         ws.send(ssmlMessage, (error) => {
                             if (error) {
@@ -254,7 +254,7 @@ export class EdgeTTSClient {
                 reject(e)
             }
         })
-        
+
         const result: Promise<ConvertResult> = Promise.race([
             convertResult,
             new Promise<ConvertResult>((_, reject) => {

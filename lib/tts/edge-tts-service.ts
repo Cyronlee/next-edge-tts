@@ -7,14 +7,14 @@ export class EdgeTTSService implements TTSService {
         const ssml = new SSML(text, options.voice, options.volume, options.rate, options.pitch)
         return await this.convertSSML(ssml.toString())
     }
-    
+
     private async convertSSML(ssml: string): Promise<Speech> {
         const result = await EdgeTTSClient.convert(ssml, {
             format: "audio-24khz-96kbitrate-mono-mp3",
             sentenceBoundaryEnabled: false,
             wordBoundaryEnabled: false,
         })
-        
+
         const sentenceBoundaries = result.metadata.filter(data => {
             return data["Type"] === "SentenceBoundary"
         }).map(data => {
@@ -27,7 +27,7 @@ export class EdgeTTSService implements TTSService {
             }
             return sb
         })
-        
+
         const wordBoundaries = result.metadata.filter(data => {
             return data["Type"] === "WordBoundary"
         }).map(data => {
@@ -40,14 +40,14 @@ export class EdgeTTSService implements TTSService {
             }
             return sb
         })
-        
+
         return {
             audio: result.audio,
             sentenceBoundaries: sentenceBoundaries,
             wordBoundaries: wordBoundaries
         }
     }
-    
+
     async fetchVoices(): Promise<Array<Voice>> {
         const data = await EdgeTTSClient.voices()
         let voices = data.map((item: any) => {

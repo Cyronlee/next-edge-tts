@@ -30,7 +30,7 @@ export default function Home() {
     if (voices.length > 0) {
       const uniqueLocales = Array.from(new Set(voices.map(v => v.locale))).sort()
       setLocales(uniqueLocales)
-      
+
       // 默认选择中文普通话
       if (!selectedLocale && uniqueLocales.includes('zh-CN')) {
         setSelectedLocale('zh-CN')
@@ -62,17 +62,23 @@ export default function Home() {
 
     setLoading(true)
     try {
-      const params = new URLSearchParams({
-        text,
-        voice: selectedVoice,
-        rate: rate.toString(),
-        pitch: pitch.toString(),
-        volume: volume.toString(),
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          voice: selectedVoice,
+          rate,
+          pitch,
+          volume,
+        }),
       })
 
-      const response = await fetch(`/api/tts?${params.toString()}`)
       if (!response.ok) {
-        throw new Error('Failed to generate audio')
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to generate audio')
       }
 
       const blob = await response.blob()
@@ -104,18 +110,6 @@ export default function Home() {
       'ko-KR': '韩语（韩国）',
     }
     return localeMap[locale] || locale
-  }
-
-  const getApiUrl = () => {
-    if (typeof window === 'undefined') return ''
-    const params = new URLSearchParams({
-      text: text || '{text}',
-      voice: selectedVoice || '{voice}',
-      rate: rate.toString(),
-      pitch: pitch.toString(),
-      volume: volume.toString(),
-    })
-    return `${window.location.origin}/api/tts?${params.toString()}`
   }
 
   return (
@@ -151,10 +145,10 @@ export default function Home() {
                     onChange={(e) => setText(e.target.value)}
                     className="min-h-[200px] resize-none"
                   />
-                  
+
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleGenerate} 
+                    <Button
+                      onClick={handleGenerate}
                       disabled={loading || !text || !selectedVoice}
                       className="flex-1"
                     >
@@ -275,10 +269,25 @@ export default function Home() {
                     <h3 className="text-lg font-semibold mb-2">2. 文本转语音</h3>
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
                       <code className="text-sm whitespace-pre">
-                        GET /api/tts?text={'{text}'}&voice={'{voice}'}&rate={'{rate}'}&pitch={'{pitch}'}&volume={'{volume}'}
+                        POST /api/tts
                       </code>
                     </div>
                     
+                    <div className="mt-4">
+                      <h4 className="font-semibold mb-2">请求体（JSON）：</h4>
+                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
+                        <code className="text-sm whitespace-pre">
+{`{
+  "text": "要转换的文本",
+  "voice": "语音名称",
+  "rate": 0,      // 可选，范围 -100 到 100，默认 0
+  "pitch": 0,     // 可选，范围 -100 到 100，默认 0
+  "volume": 100   // 可选，范围 0 到 100，默认 100
+}`}
+                        </code>
+                      </div>
+                    </div>
+
                     <div className="mt-4">
                       <h4 className="font-semibold mb-2">参数说明：</h4>
                       <ul className="space-y-2 text-sm">
@@ -291,10 +300,16 @@ export default function Home() {
                     </div>
 
                     <div className="mt-4">
-                      <h4 className="font-semibold mb-2">当前配置的 API 请求示例：</h4>
+                      <h4 className="font-semibold mb-2">当前配置的请求示例：</h4>
                       <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
-                        <code className="text-sm break-all">
-                          {getApiUrl()}
+                        <code className="text-sm whitespace-pre">
+{`{
+  "text": "${text || '{text}'}",
+  "voice": "${selectedVoice || '{voice}'}",
+  "rate": ${rate},
+  "pitch": ${pitch},
+  "volume": ${volume}
+}`}
                         </code>
                       </div>
                     </div>
@@ -303,8 +318,40 @@ export default function Home() {
                       <h4 className="font-semibold mb-2">cURL 示例：</h4>
                       <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
                         <code className="text-sm whitespace-pre">
-{`curl -X GET "${getApiUrl()}" \\
+{`curl -X POST "${typeof window !== 'undefined' ? window.location.origin : ''}/api/tts" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "text": "${text || 'Hello World'}",
+    "voice": "${selectedVoice || 'Microsoft Server Speech Text to Speech Voice (en-US, JennyNeural)'}",
+    "rate": ${rate},
+    "pitch": ${pitch},
+    "volume": ${volume}
+  }' \\
   -o output.mp3`}
+                        </code>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <h4 className="font-semibold mb-2">JavaScript/Fetch 示例：</h4>
+                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
+                        <code className="text-sm whitespace-pre">
+{`const response = await fetch('/api/tts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    text: '${text || 'Hello World'}',
+    voice: '${selectedVoice || 'Microsoft Server Speech Text to Speech Voice (en-US, JennyNeural)'}',
+    rate: ${rate},
+    pitch: ${pitch},
+    volume: ${volume}
+  })
+});
+
+const blob = await response.blob();
+const audioUrl = URL.createObjectURL(blob);`}
                         </code>
                       </div>
                     </div>

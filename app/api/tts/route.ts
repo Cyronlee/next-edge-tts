@@ -3,10 +3,21 @@ import { TTSOptions } from "@/lib/tts/types"
 
 Error.stackTraceLimit = Infinity;
 
-export async function GET(request: Request) {
+interface TTSRequest {
+    text: string
+    voice: string
+    rate?: number
+    pitch?: number
+    volume?: number
+    personality?: string
+}
+
+export async function POST(request: Request) {
     try {
-        const { searchParams } = new URL(request.url)
-        const text = String(searchParams.get('text') ?? '')
+        const body: TTSRequest = await request.json()
+        
+        const { text, voice, rate = 0, pitch = 0, volume = 100, personality } = body
+        
         if (!text) {
             return new Response(JSON.stringify({ error: 'Text is required' }), { 
                 status: 400, 
@@ -14,7 +25,6 @@ export async function GET(request: Request) {
             })
         }
         
-        const voice = String(searchParams.get('voice') ?? '')
         if (!voice) {
             return new Response(JSON.stringify({ error: 'Voice is required' }), { 
                 status: 400, 
@@ -22,26 +32,27 @@ export async function GET(request: Request) {
             })
         }
         
-        const parseNumberParam = (paramName: string, defaultValue: number, min: number, max: number) => {
-            const paramValue = searchParams.get(paramName);
-            if (paramValue === null || paramValue === undefined) {
-                return defaultValue;
-            }
-            try {
-                const num = Number(paramValue)
-                if (Number.isNaN(num)) throw new Error('NaN')
-                if (num < min || num > max) throw new Error('out of range')
-                return num
-            } catch {
-                console.error(`Invalid ${paramName} value: ${paramValue}`);
-                throw new Error(`Invalid ${paramName} value`);
-            }
-        };
-
-        const pitch = parseNumberParam('pitch', 0, -100, 100);
-        const rate = parseNumberParam('rate', 0, -100, 100);
-        const volume = parseNumberParam('volume', 100, 0, 100);
-        const personality = searchParams.get('personality') ?? undefined;
+        // 验证参数范围
+        if (rate < -100 || rate > 100) {
+            return new Response(JSON.stringify({ error: 'Rate must be between -100 and 100' }), { 
+                status: 400, 
+                headers: { 'Content-Type': 'application/json' } 
+            })
+        }
+        
+        if (pitch < -100 || pitch > 100) {
+            return new Response(JSON.stringify({ error: 'Pitch must be between -100 and 100' }), { 
+                status: 400, 
+                headers: { 'Content-Type': 'application/json' } 
+            })
+        }
+        
+        if (volume < 0 || volume > 100) {
+            return new Response(JSON.stringify({ error: 'Volume must be between 0 and 100' }), { 
+                status: 400, 
+                headers: { 'Content-Type': 'application/json' } 
+            })
+        }
         
         const service = new EdgeTTSService()
         const options: TTSOptions = {

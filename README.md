@@ -53,7 +53,20 @@ GET /api/voices
 ### 文本转语音
 
 ```bash
-GET /api/tts?text={text}&voice={voice}&rate={rate}&pitch={pitch}&volume={volume}
+POST /api/tts
+Content-Type: application/json
+```
+
+#### 请求体
+
+```json
+{
+  "text": "要转换的文本",
+  "voice": "语音名称",
+  "rate": 0,      // 可选，范围 -100 到 100，默认 0
+  "pitch": 0,     // 可选，范围 -100 到 100，默认 0
+  "volume": 100   // 可选，范围 0 到 100，默认 100
+}
 ```
 
 #### 参数说明
@@ -68,22 +81,46 @@ GET /api/tts?text={text}&voice={voice}&rate={rate}&pitch={pitch}&volume={volume}
 
 ```bash
 # 中文语音示例
-curl -G "https://next-edge-tts-two.vercel.app/api/tts" \
-  --data-urlencode "text=你好世界" \
-  --data-urlencode "voice=Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)" \
-  -d "rate=0" \
-  -d "pitch=0" \
-  -d "volume=100" \
+curl -X POST "https://next-edge-tts-two.vercel.app/api/tts" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "你好世界",
+    "voice": "Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)",
+    "rate": 0,
+    "pitch": 0,
+    "volume": 100
+  }' \
   -o output.mp3
 
 # 英文语音示例
-curl -G "https://next-edge-tts-two.vercel.app/api/tts" \
-  --data-urlencode "text=Hello World" \
-  --data-urlencode "voice=Microsoft Server Speech Text to Speech Voice (en-US, JennyNeural)" \
-  -d "rate=0" \
-  -d "pitch=0" \
-  -d "volume=100" \
+curl -X POST "https://next-edge-tts-two.vercel.app/api/tts" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello World",
+    "voice": "Microsoft Server Speech Text to Speech Voice (en-US, JennyNeural)",
+    "rate": 0,
+    "pitch": 0,
+    "volume": 100
+  }' \
   -o output.mp3
+
+# JavaScript/Fetch 示例
+const response = await fetch('https://next-edge-tts-two.vercel.app/api/tts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    text: 'Hello World',
+    voice: 'Microsoft Server Speech Text to Speech Voice (en-US, JennyNeural)',
+    rate: 0,
+    pitch: 0,
+    volume: 100
+  })
+});
+
+const blob = await response.blob();
+const audioUrl = URL.createObjectURL(blob);
 ```
 
 ## 技术栈
